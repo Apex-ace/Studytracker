@@ -1,0 +1,20 @@
+{
+  "name": "class-x-study-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+   "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "firebase": "^12.16.0",
+    "next": "16.3.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.3.0"
+  }
+}
