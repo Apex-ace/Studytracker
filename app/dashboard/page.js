@@ -17,9 +17,22 @@ function DashboardContent() {
 
   return (
     <AppShell
-      title={`Hi ${String(profile?.name || "Student").split(" ")[0]}`}
+      title={`Hi ${String(profile?.name || "Student").split(" ")[0]} 👋`}
       subtitle="Here is where your board preparation stands today."
     >
+      <section className="hero-card">
+        <div>
+          <p className="eyebrow">Overall preparation</p>
+          <h2>{dashboard.overallLatest ? `${Math.round(dashboard.overallLatest)}% latest average` : "Start your first chapter test"}</h2>
+          <p className="muted">Board goal is {settings.defaultTarget}%. Focus on weak areas and keep revision dates current.</p>
+          <div className="hero-actions">
+            <Link href="/timetable" className="primary-btn compact">Open timetable</Link>
+            <Link href="/subjects" className="secondary-btn compact">Update chapters</Link>
+            <Link href="/words" className="ghost-btn compact">Add a word</Link>
+          </div>
+        </div>
+        <ProgressRing value={dashboard.boardReadyPercent} label="board ready" size="lg" />
+      </section>
 
       <section className="stats-grid four">
         <StatCard label="Latest average" value={pct(dashboard.overallLatest)} helper={`Goal ${settings.defaultTarget}%`} />

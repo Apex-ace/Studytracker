@@ -7,16 +7,22 @@ import { auth } from "@/lib/firebase";
 import { useAuth } from "@/components/AuthProvider";
 
 const studentNav = [
-  ["/dashboard", "⌂", "Home"],
-  ["/subjects", "▦", "Subjects"],
-  ["/mock-tests", "✓", "Tests"],
-  ["/skills", "◎", "Skills"],
+  ["/dashboard", "⌂", "Home", "Home"],
+  ["/timetable", "◷", "Timetable", "Plan"],
+  ["/subjects", "▦", "Subjects", "Subjects"],
+  ["/words", "Aa", "Words & Meanings", "Words"],
+  ["/mock-tests", "✓", "Mock Tests", "Tests"],
+  ["/skills", "◎", "Skills", "Skills"],
 ];
 
 const adminNav = [
-  ["/admin", "◉", "Overview"],
-  ["/dashboard", "⌂", "My view"],
+  ["/admin", "◉", "Overview", "Admin"],
+  ["/dashboard", "⌂", "My view", "My view"],
 ];
+
+function isActive(pathname, href) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function AppShell({ children, title, subtitle, admin = false, actions = null }) {
   const pathname = usePathname();
@@ -42,7 +48,7 @@ export default function AppShell({ children, title, subtitle, admin = false, act
 
         <nav className="side-links">
           {nav.map(([href, icon, label]) => (
-            <Link key={href} href={href} className={pathname === href || pathname.startsWith(`${href}/`) ? "nav-link active" : "nav-link"}>
+            <Link key={href} href={href} className={isActive(pathname, href) ? "nav-link active" : "nav-link"}>
               <span>{icon}</span>{label}
             </Link>
           ))}
@@ -71,10 +77,10 @@ export default function AppShell({ children, title, subtitle, admin = false, act
       </main>
 
       <nav className="bottom-nav">
-        {nav.map(([href, icon, label]) => (
-          <Link key={href} href={href} className={pathname === href || pathname.startsWith(`${href}/`) ? "bottom-link active" : "bottom-link"}>
+        {nav.map(([href, icon, , mobileLabel]) => (
+          <Link key={href} href={href} className={isActive(pathname, href) ? "bottom-link active" : "bottom-link"}>
             <span className="bottom-icon">{icon}</span>
-            <span>{label}</span>
+            <span>{mobileLabel}</span>
           </Link>
         ))}
         {profile?.role === "admin" && !admin && (

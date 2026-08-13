@@ -8,7 +8,7 @@ import AppShell from "@/components/AppShell";
 import StatCard from "@/components/StatCard";
 import { SUBJECT_ORDER, SUBJECTS } from "@/lib/catalog";
 import { DEFAULT_SETTINGS, dashboardMetrics, chapterMetrics } from "@/lib/performance";
-import { getUserProfile, watchChapterProgress, watchSettings } from "@/lib/firestore";
+import { getUserProfile, watchChapterProgress, watchSettings, watchStudyActivities, watchVocabulary } from "@/lib/firestore";
 import { pct, statusTone } from "@/lib/format";
 
 const subjects = SUBJECT_ORDER.map((slug) => SUBJECTS[slug]);
@@ -19,13 +19,17 @@ function UserProgressContent() {
   const [student, setStudent] = useState(null);
   const [progress, setProgress] = useState({});
   const [settingsRemote, setSettingsRemote] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [words, setWords] = useState([]);
 
   useEffect(() => {
     let active = true;
     getUserProfile(uid).then((row) => active && setStudent(row));
     const stop1 = watchChapterProgress(uid, setProgress);
     const stop2 = watchSettings(setSettingsRemote);
-    return () => { active = false; stop1(); stop2(); };
+    const stop3 = watchStudyActivities(uid, setActivities);
+    const stop4 = watchVocabulary(uid, setWords);
+    return () => { active = false; stop1(); stop2(); stop3(); stop4(); };
   }, [uid]);
 
   const settings = useMemo(() => ({ ...DEFAULT_SETTINGS, ...(settingsRemote || {}) }), [settingsRemote]);
@@ -36,6 +40,17 @@ function UserProgressContent() {
     return { subject, chapter, row, metrics: chapterMetrics(row, settings) };
   })).filter((item) => item.metrics.readiness === "Weak" || item.metrics.maxDelay > settings.delayWarningDays)
     .sort((a, b) => (b.metrics.maxDelay + (b.metrics.readiness === "Weak" ? 50 : 0)) - (a.metrics.maxDelay + (a.metrics.readiness === "Weak" ? 50 : 0))), [progress, settings]);
+
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+  const todayActivities = activities.filter((item) => item.scheduledDate === today);
+  const activityStatus = {
+    NOT_STARTED: ["Not started", "neutral"],
+    PENDING: ["Pending", "warning"],
+    COMPLETED: ["Completed", "success"],
+  };
 
   return (
     <AppShell admin title={student?.name || "Student progress"} subtitle={student?.email || "Live student dashboard"} actions={<Link href="/admin" className="secondary-btn compact">← All students</Link>}>
@@ -65,6 +80,21 @@ function UserProgressContent() {
           {weakRows.length ? <div className="attention-list">{weakRows.slice(0, 12).map((item) => (
             <div className="attention-row" key={item.chapter.id}><div><strong>{item.chapter.title}</strong><small>{item.subject.name}{item.row.mainWeakness ? ` • ${item.row.mainWeakness}` : ""}</small></div><div><span className={`pill ${statusTone(item.metrics.readiness)}`}>{item.metrics.readiness}</span><small>{item.metrics.latest === null ? "No score" : `${Math.round(item.metrics.latest)}%`}{item.metrics.maxDelay > 0 ? ` • +${item.metrics.maxDelay}d` : ""}</small></div></div>
           ))}</div> : <div className="empty-state"><span>✓</span><strong>No weak or delayed chapters</strong></div>}
+        </section>
+      </div>
+
+      <div className="dashboard-grid admin-study-grid">
+        <section className="panel-card">
+          <div className="section-heading"><div><p className="eyebrow">Today</p><h2>Timetable activity</h2></div><span className="pill blue">{todayActivities.length} planned</span></div>
+          {todayActivities.length ? <div className="admin-activity-list">{todayActivities.map((item) => {
+            const [label, tone] = activityStatus[item.status] || activityStatus.NOT_STARTED;
+            return <div className="admin-activity-row" key={item.id}><div className="admin-activity-time"><strong>{item.startTime || "Anytime"}</strong><small>{item.endTime || ""}</small></div><div><strong>{item.title}</strong><small>{item.subject || "General"} • {item.activityType || "Study"}</small></div><span className={`pill ${tone}`}>{label}</span></div>;
+          })}</div> : <div className="empty-state compact-empty"><strong>No activities planned today.</strong></div>}
+        </section>
+
+        <section className="panel-card">
+          <div className="section-heading"><div><p className="eyebrow">Vocabulary</p><h2>Recently learned words</h2></div><span className="pill purple">{words.length} total</span></div>
+          {words.length ? <div className="admin-word-list">{words.slice(0, 8).map((item) => <div className="admin-word-row" key={item.id}><div><strong>{item.word}</strong><small>{item.subject || "General"} • {item.learnedOn || ""}</small></div><p>{item.meaning}</p></div>)}</div> : <div className="empty-state compact-empty"><strong>No words added yet.</strong></div>}
         </section>
       </div>
 

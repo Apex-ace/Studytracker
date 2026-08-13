@@ -129,3 +129,19 @@ See [`EXCEL_LOGIC.md`](./EXCEL_LOGIC.md) for the exact formulas and status rules
 ## Important design decision
 
 The chapter and skill catalog is bundled in `lib/catalog.js`, because it is curriculum/reference data from the workbook. Student progress remains in Firestore. This keeps Firestore smaller, prevents accidental syllabus edits, and makes every student's tracker consistent.
+
+## Timetable and vocabulary additions
+
+The student app now also includes:
+
+- `/timetable` — daily/weekly study planning with Study, Revision, Homework, Test, Reading, Practice and Other activities. Each activity can be marked **Not started**, **Pending** or **Completed**.
+- `/words` — a personal Words & Meanings notebook with subject, learned date, example sentence and notes.
+
+The per-student admin detail page also shows today's timetable activity and the student's recently learned words.
+
+Firestore now uses two additional collections:
+
+- `studyActivities`
+- `vocabulary`
+
+After updating the project, publish the updated `firebase/firestore.rules` before using these pages.
