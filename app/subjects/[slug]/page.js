@@ -29,9 +29,8 @@ function SubjectContent() {
       const m = chapterMetrics(progress[chapter.id] || {}, settings);
       const searchOk = !search.trim() || chapter.title.toLowerCase().includes(search.trim().toLowerCase());
       const filterOk = filter === "all" ||
-        (filter === "weak" && m.readiness === "Weak") ||
         (filter === "ready" && ["Board Ready", "Mastered"].includes(m.readiness)) ||
-        (filter === "pending" && ["Not Started", "Developing"].includes(m.readiness));
+        (filter === "pending" && !["Board Ready", "Mastered"].includes(m.readiness));
       return searchOk && filterOk;
     });
   }, [subject, progress, settings, search, filter]);
@@ -41,18 +40,20 @@ function SubjectContent() {
   }
 
   return (
-    <AppShell title={subject.name} subtitle="The readiness rules below match the Excel tracker.">
-      <section className="stats-grid four compact-stats">
-        <StatCard label="Latest average" value={pct(metrics.avgLatest)} />
-        <StatCard label="First cut" value={pct(metrics.firstCutPercent)} tone="purple" />
-        <StatCard label="Board ready" value={`${metrics.boardReady}/${metrics.trackedAreas}`} tone="success" />
-        <StatCard label="Weak areas" value={metrics.weak} tone={metrics.weak ? "danger" : "success"} />
+    <AppShell title={subject.name}>
+      <section className="stats-grid six compact-stats subject-stage-stats">
+        <StatCard label="First Cut" value={pct(metrics.firstCutPercent)} tone="purple" />
+        <StatCard label="Second Cut" value={pct(metrics.secondCutPercent)} tone="blue" />
+        <StatCard label="Third Cut" value={pct(metrics.thirdCutPercent)} tone="success" />
+        <StatCard label="Test 1" value={metrics.test1Avg === null ? "—" : pct(metrics.test1Avg)} />
+        <StatCard label="Test 2" value={metrics.test2Avg === null ? "—" : pct(metrics.test2Avg)} />
+        <StatCard label="Test 3" value={metrics.test3Avg === null ? "—" : pct(metrics.test3Avg)} />
       </section>
 
-      <section className="filter-bar">
-        <input className="search-input" placeholder="Search chapter…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <section className="filter-bar subject-filter-bar">
+        <input className="search-input" placeholder="Search chapters" value={search} onChange={(e) => setSearch(e.target.value)} />
         <div className="filter-chips">
-          {[['all','All'],['pending','Pending'],['weak','Weak'],['ready','Ready']].map(([value,label]) => (
+          {[["all","All"],["pending","Pending"],["ready","Ready"]].map(([value,label]) => (
             <button key={value} onClick={() => setFilter(value)} className={filter === value ? "filter-chip active" : "filter-chip"}>{label}</button>
           ))}
         </div>
@@ -70,7 +71,7 @@ function SubjectContent() {
           />
         ))}
       </div>
-      {!filtered.length && <div className="empty-state"><strong>No chapters match this filter.</strong></div>}
+      {!filtered.length && <div className="empty-state compact-empty"><strong>No chapters match this filter.</strong></div>}
     </AppShell>
   );
 }

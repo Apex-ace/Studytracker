@@ -88,29 +88,23 @@ function WordsContent() {
   return (
     <AppShell
       title="Words & Meanings"
-      subtitle="Build your own vocabulary notebook from everything you learn."
-      actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ New word"}</button>}
+      actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "Add word"}</button>}
     >
-      <section className="vocab-hero">
-        <div><p className="eyebrow">My vocabulary</p><h2>One new word at a time.</h2><p className="muted">Save the word, its meaning and an example sentence so it is easy to revise later.</p></div>
-        <div className="vocab-hero-mark">Aa</div>
-      </section>
-
       <section className="stats-grid three compact-stats">
-        <StatCard label="Words learned" value={words.length} helper="Your notebook" />
-        <StatCard label="This week" value={thisWeek} helper="New additions" tone="success" />
-        <StatCard label="Subjects" value={usedSubjects.size} helper="With vocabulary" tone="purple" />
+        <StatCard label="Words learned" value={words.length} />
+        <StatCard label="This week" value={thisWeek} tone="success" />
+        <StatCard label="Subjects" value={usedSubjects.size} tone="purple" />
       </section>
 
-      <button className="primary-btn mobile-add" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close form" : "+ Add new word"}</button>
+      <button className="primary-btn mobile-add" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "Add word"}</button>
 
       {showForm && (
         <section className="panel-card form-panel">
-          <div className="section-heading"><div><p className="eyebrow">New learning</p><h2>Add word & meaning</h2></div></div>
+          <div className="section-heading"><h2>Add word & meaning</h2></div>
           <form className="vocab-form" onSubmit={addWord}>
             <div className="form-grid two">
-              <label>New word<input name="word" placeholder="e.g. Perseverance" autoFocus /></label>
-              <label>Meaning<input name="meaning" placeholder="Continuing despite difficulty" /></label>
+              <label>Word<input name="word" autoFocus /></label>
+              <label>Meaning<input name="meaning" /></label>
             </div>
             <div className="form-grid two">
               <label>Subject
@@ -121,8 +115,8 @@ function WordsContent() {
               </label>
               <label>Learned on<input name="learnedOn" type="date" defaultValue={dateKey()} /></label>
             </div>
-            <label>Example sentence<textarea name="exampleSentence" placeholder="Use the word in your own sentence." /></label>
-            <label>Extra note<textarea name="notes" placeholder="Synonym, antonym, pronunciation or where you found the word." /></label>
+            <label>Example sentence<textarea name="exampleSentence" /></label>
+            <label>Note<textarea name="notes" /></label>
             {error && <div className="error-box">{error}</div>}
             <div className="form-actions-right"><button type="button" className="ghost-btn compact" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-btn compact" disabled={saving}>{saving ? "Saving…" : "Save word"}</button></div>
           </form>
@@ -131,9 +125,9 @@ function WordsContent() {
 
       <section className="panel-card">
         <div className="vocab-toolbar">
-          <div><p className="eyebrow">Notebook</p><h2>{filtered.length} {filtered.length === 1 ? "word" : "words"}</h2></div>
+          <h2>{filtered.length} {filtered.length === 1 ? "word" : "words"}</h2>
           <div className="vocab-filters">
-            <input className="search-input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search word or meaning…" />
+            <input className="search-input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" />
             <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)}>
               <option>All</option>
               <option>General</option>
@@ -145,20 +139,20 @@ function WordsContent() {
         {filtered.length ? (
           <div className="vocab-grid">
             {filtered.map((item) => (
-              <article className="vocab-card" key={item.id}>
+              <article className="vocab-card vocab-card-clean" key={item.id}>
                 <div className="vocab-card-top">
-                  <div><span className="vocab-letter">{String(item.word || "?").slice(0, 1).toUpperCase()}</span><div><small>{item.subject || "General"}</small><h3>{item.word}</h3></div></div>
+                  <div><div><small>{item.subject || "General"}</small><h3>{item.word}</h3></div></div>
                   <button className="danger-text" onClick={() => deleteVocabularyWord(user.uid, item.id)}>Delete</button>
                 </div>
                 <div className="meaning-box"><span>Meaning</span><p>{item.meaning}</p></div>
                 {item.exampleSentence && <div className="example-box"><span>Example</span><p>“{item.exampleSentence}”</p></div>}
                 {item.notes && <p className="vocab-note">{item.notes}</p>}
-                <small className="vocab-date">Learned {displayDate(item.learnedOn)}</small>
+                <small className="vocab-date">{displayDate(item.learnedOn)}</small>
               </article>
             ))}
           </div>
         ) : (
-          <div className="empty-state"><span>Aa</span><strong>No words found</strong><p>Add a new word you learned today, along with its meaning.</p></div>
+          <div className="empty-state compact-empty"><strong>No words found</strong></div>
         )}
       </section>
     </AppShell>

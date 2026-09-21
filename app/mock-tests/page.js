@@ -28,25 +28,38 @@ function MockTestsContent() {
   const avgScore = avg.length ? avg.reduce((s, x) => s + x.metrics.scorePercent, 0) / avg.length : 0;
 
   return (
-    <AppShell title="Mock tests" subtitle="Full syllabus and sample-paper analysis from the workbook." actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ Add test"}</button>}>
+    <AppShell title="Mock tests" actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "Add test"}</button>}>
       <section className="stats-grid three compact-stats">
-        <div className="stat-card blue"><span className="stat-label">Papers logged</span><strong className="stat-value">{tests.length}</strong><small>All subjects</small></div>
-        <div className="stat-card success"><span className="stat-label">Average score</span><strong className="stat-value">{pct(avgScore)}</strong><small>Target {settings.defaultTarget}%</small></div>
-        <div className="stat-card purple"><span className="stat-label">Best score</span><strong className="stat-value">{avg.length ? pct(Math.max(...avg.map((x) => x.metrics.scorePercent))) : "—"}</strong><small>Across saved papers</small></div>
+        <div className="stat-card blue"><span className="stat-label">Papers logged</span><strong className="stat-value">{tests.length}</strong></div>
+        <div className="stat-card success"><span className="stat-label">Average score</span><strong className="stat-value">{pct(avgScore)}</strong></div>
+        <div className="stat-card purple"><span className="stat-label">Best score</span><strong className="stat-value">{avg.length ? pct(Math.max(...avg.map((x) => x.metrics.scorePercent))) : "—"}</strong></div>
       </section>
 
-      <button className="primary-btn mobile-add" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close form" : "+ Add mock test"}</button>
+      <button className="primary-btn mobile-add" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "Add test"}</button>
 
       {showForm && <section className="panel-card form-panel"><MockTestForm uid={user.uid} settings={settings} onDone={() => setShowForm(false)} /></section>}
 
       <section className="panel-card">
-        <div className="section-heading"><div><p className="eyebrow">History</p><h2>Sample paper performance</h2></div></div>
+        <div className="section-heading"><h2>Test history</h2></div>
         {scored.length ? <div className="mock-list">{scored.map(({ test, metrics }) => (
           <article className="mock-card" key={test.id}>
-            <div className="mock-card-main"><div><small>{test.date} • {test.subject}</small><strong>{test.paperSource || "Mock test"}</strong><span>{test.marksObtained}/{test.totalMarks} marks • {test.timeTaken ? `${test.timeTaken} min` : "Time not entered"}</span></div><div className="mock-score"><strong>{pct(metrics.scorePercent, 1)}</strong><small>{metrics.gap >= 0 ? "+" : ""}{metrics.gap?.toFixed(1)} pp vs target</small></div></div>
-            <div className="mock-losses"><span>Lost <strong>{metrics.totalMarksLost}</strong></span><span>Execution potential <strong>{pct(metrics.executionPotential, 1)}</strong></span>{test.mainLearning && <span className="grow">Learning: <strong>{test.mainLearning}</strong></span>}<button className="danger-text" onClick={() => deleteMockTest(user.uid, test.id)}>Delete</button></div>
+            <div className="mock-card-main">
+              <div>
+                <small>{test.date} • {(test.subjects || []).length ? test.subjects.join(", ") : test.subject}</small>
+                <strong>{test.paperSource || "Mock test"}</strong>
+                <span>{test.chapter || (test.chapters || []).join(", ") || "Full syllabus"}</span>
+                <span>{test.marksObtained}/{test.totalMarks} marks{test.timeTaken ? ` • ${test.timeTaken} min` : ""}</span>
+              </div>
+              <div className="mock-score"><strong>{pct(metrics.scorePercent, 1)}</strong><small>{metrics.gap >= 0 ? "+" : ""}{metrics.gap?.toFixed(1)} pp</small></div>
+            </div>
+            <div className="mock-losses">
+              <span>Lost <strong>{metrics.totalMarksLost}</strong></span>
+              <span>Potential <strong>{pct(metrics.executionPotential, 1)}</strong></span>
+              {test.mainLearning && <span className="grow"><strong>{test.mainLearning}</strong></span>}
+              <button className="danger-text" onClick={() => deleteMockTest(user.uid, test.id)}>Delete</button>
+            </div>
           </article>
-        ))}</div> : <div className="empty-state"><span>✓</span><strong>No mock tests yet</strong><p>Add the first sample paper to start analysing execution and marks lost.</p></div>}
+        ))}</div> : <div className="empty-state compact-empty"><strong>No mock tests yet</strong></div>}
       </section>
     </AppShell>
   );

@@ -7,20 +7,24 @@ import { auth } from "@/lib/firebase";
 import { useAuth } from "@/components/AuthProvider";
 
 const studentNav = [
-  ["/dashboard", "⌂", "Home", "Home"],
-  ["/timetable", "◷", "Timetable", "Plan"],
-  ["/subjects", "▦", "Subjects", "Subjects"],
-  ["/words", "Aa", "Words & Meanings", "Words"],
-  ["/mock-tests", "✓", "Mock Tests", "Tests"],
-  ["/skills", "◎", "Skills", "Skills"],
+  ["/dashboard", "Home", "Home"],
+  ["/timetable", "Timetable", "Plan"],
+  ["/subjects", "Subjects", "Subjects"],
+  ["/words", "Words & Meanings", "Words"],
+  ["/mock-tests", "Mock Tests", "Tests"],
+  ["/skills", "Skills", "Skills"],
 ];
 
 const adminNav = [
-  ["/admin", "◉", "Overview", "Admin"],
-  ["/dashboard", "⌂", "My view", "My view"],
+  ["/admin", "Overview", "Overview"],
+  ["/admin/planner", "Work planner", "Planner"],
+  ["/dashboard", "My view", "My view"],
 ];
 
 function isActive(pathname, href) {
+  if (href === "/admin") {
+    return pathname === "/admin" || pathname.startsWith("/admin/users/");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -39,7 +43,6 @@ export default function AppShell({ children, title, subtitle, admin = false, act
     <div className="app-frame">
       <aside className="side-nav">
         <div className="brand-block">
-          <div className="brand-mark">P</div>
           <div>
             <strong>BoardTrack</strong>
             <small>Class X • 2027</small>
@@ -47,13 +50,13 @@ export default function AppShell({ children, title, subtitle, admin = false, act
         </div>
 
         <nav className="side-links">
-          {nav.map(([href, icon, label]) => (
+          {nav.map(([href, label]) => (
             <Link key={href} href={href} className={isActive(pathname, href) ? "nav-link active" : "nav-link"}>
-              <span>{icon}</span>{label}
+              {label}
             </Link>
           ))}
           {profile?.role === "admin" && !admin && (
-            <Link href="/admin" className="nav-link"><span>◉</span>Admin</Link>
+            <Link href="/admin" className="nav-link">Admin</Link>
           )}
         </nav>
 
@@ -62,31 +65,27 @@ export default function AppShell({ children, title, subtitle, admin = false, act
 
       <main className="app-main">
         <header className="top-bar">
-          <div>
-            <p className="eyebrow">{admin ? "Admin view" : "Student tracker"}</p>
+          <div className="top-title-wrap">
             <h1>{title}</h1>
             {subtitle && <p className="muted top-subtitle">{subtitle}</p>}
           </div>
           <div className="top-actions">
             {actions}
-            <div className="avatar">{String(profile?.name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
+            <div className="avatar" aria-label="Profile initial">{String(profile?.name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
           </div>
         </header>
 
         <div className="page-content">{children}</div>
       </main>
 
-      <nav className="bottom-nav">
-        {nav.map(([href, icon, , mobileLabel]) => (
+      <nav className="bottom-nav" aria-label="Main navigation">
+        {nav.map(([href, , mobileLabel]) => (
           <Link key={href} href={href} className={isActive(pathname, href) ? "bottom-link active" : "bottom-link"}>
-            <span className="bottom-icon">{icon}</span>
-            <span>{mobileLabel}</span>
+            {mobileLabel}
           </Link>
         ))}
         {profile?.role === "admin" && !admin && (
-          <Link href="/admin" className="bottom-link">
-            <span className="bottom-icon">◉</span><span>Admin</span>
-          </Link>
+          <Link href="/admin" className="bottom-link">Admin</Link>
         )}
       </nav>
     </div>

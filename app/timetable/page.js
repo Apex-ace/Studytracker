@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import StatCard from "@/components/StatCard";
 import { useAuth } from "@/components/AuthProvider";
 import { SUBJECT_ORDER, SUBJECTS } from "@/lib/catalog";
+import { taskStatusLabel, taskStatusTone } from "@/lib/adminAnalytics";
 import {
   addStudyActivity,
   deleteStudyActivity,
@@ -13,12 +14,6 @@ import {
   watchStudyActivities,
   syncExistingChapterPlansToTimetable,
 } from "@/lib/firestore";
-
-const STATUS = {
-  NOT_STARTED: { label: "Not started", tone: "neutral" },
-  PENDING: { label: "Pending", tone: "warning" },
-  COMPLETED: { label: "Completed", tone: "success" },
-};
 
 const ACTIVITY_TYPES = ["Study", "Revision", "Homework", "Test", "Reading", "Practice", "Other"];
 
@@ -65,8 +60,11 @@ function humanDate(value) {
   });
 }
 
-function statusInfo(status) {
-  return STATUS[status] || STATUS.NOT_STARTED;
+function displayTime(activity) {
+  if (activity.startTime && activity.endTime) return `${activity.startTime} – ${activity.endTime}`;
+  if (activity.startTime) return `From ${activity.startTime}`;
+  if (activity.endTime) return `Until ${activity.endTime}`;
+  return "Anytime";
 }
 
 function TimetableContent() {
@@ -76,6 +74,10 @@ function TimetableContent() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const initialSubjectSlug = SUBJECT_ORDER[0] || "";
+  const initialChapterId = SUBJECTS[initialSubjectSlug]?.chapters?.[0]?.id || "";
+  const [activitySubjectSlug, setActivitySubjectSlug] = useState(initialSubjectSlug);
+  const [activityChapterId, setActivityChapterId] = useState(initialChapterId);
 
   useEffect(() => {
     if (!user?.uid) return undefined;
@@ -84,23 +86,25 @@ function TimetableContent() {
 
   useEffect(() => {
     if (!user?.uid) return;
-    syncExistingChapterPlansToTimetable(user.uid).catch((e) => {
-      console.error("Unable to sync chapter plan with timetable", e);
-    });
+    syncExistingChapterPlansToTimetable(user.uid).catch((e) => console.error("Unable to sync chapter plan with timetable", e));
   }, [user?.uid]);
 
   const week = useMemo(() => getWeek(selectedDate), [selectedDate]);
-  const dayActivities = useMemo(
-    () => activities.filter((item) => item.scheduledDate === selectedDate),
-    [activities, selectedDate],
-  );
+  const dayActivities = useMemo(() => activities.filter((item) => item.scheduledDate === selectedDate), [activities, selectedDate]);
+  const selectedActivitySubject = SUBJECTS[activitySubjectSlug];
+  const selectedActivityChapters = selectedActivitySubject?.chapters || [];
 
   const counts = useMemo(() => ({
     total: dayActivities.length,
-    completed: dayActivities.filter((x) => x.status === "COMPLETED").length,
-    pending: dayActivities.filter((x) => x.status === "PENDING").length,
-    notStarted: dayActivities.filter((x) => !x.status || x.status === "NOT_STARTED").length,
+    completed: dayActivities.filter((item) => taskStatusLabel(item) === "Completed").length,
+    inProgress: dayActivities.filter((item) => taskStatusLabel(item) === "In progress").length,
+    missed: dayActivities.filter((item) => taskStatusLabel(item) === "Missed").length,
   }), [dayActivities]);
+
+  function changeActivitySubject(slug) {
+    setActivitySubjectSlug(slug);
+    setActivityChapterId(SUBJECTS[slug]?.chapters?.[0]?.id || "");
+  }
 
   async function addActivity(event) {
     event.preventDefault();
@@ -109,6 +113,16 @@ function TimetableContent() {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const title = String(form.get("title") || "").trim();
+    const subjectSlug = String(form.get("subjectSlug") || activitySubjectSlug);
+    const chapterId = String(form.get("chapterId") || activityChapterId);
+    const subject = SUBJECTS[subjectSlug];
+    const chapter = subject?.chapters?.find((item) => item.id === chapterId);
+
+    if (!subject || !chapter) {
+      setError("Please select a subject and chapter.");
+      setSaving(false);
+      return;
+    }
     if (!title) {
       setError("Activity title is required.");
       setSaving(false);
@@ -118,7 +132,10 @@ function TimetableContent() {
     try {
       await addStudyActivity(user.uid, {
         title,
-        subject: String(form.get("subject") || "General"),
+        subject: subject.name,
+        subjectSlug,
+        chapterId,
+        chapterTitle: chapter.title,
         activityType: String(form.get("activityType") || "Study"),
         scheduledDate: String(form.get("scheduledDate") || selectedDate),
         startTime: String(form.get("startTime") || ""),
@@ -127,6 +144,7 @@ function TimetableContent() {
         notes: String(form.get("notes") || "").trim(),
       });
       formElement.reset();
+      changeActivitySubject(initialSubjectSlug);
       setShowForm(false);
     } catch (e) {
       setError(e?.message || "Unable to add activity.");
@@ -140,73 +158,53 @@ function TimetableContent() {
   }
 
   return (
-    <AppShell
-      title="Timetable"
-      subtitle="Chapter First Cut and Revision dates appear here automatically, along with your own activities."
-      actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ Activity"}</button>}
-    >
+    <AppShell title="Timetable" actions={<button className="primary-btn compact desktop-action" onClick={() => setShowForm((value) => !value)}>{showForm ? "Close" : "Add activity"}</button>}>
       <section className="panel-card timetable-date-card">
         <div className="date-nav-row">
-          <button className="ghost-btn compact" onClick={() => setSelectedDate(shiftDate(selectedDate, -7))}>← Week</button>
-          <div className="date-title-block">
-            <p className="eyebrow">Selected day</p>
-            <h2>{humanDate(selectedDate)}</h2>
-          </div>
+          <button className="ghost-btn compact week-nav-button" onClick={() => setSelectedDate(shiftDate(selectedDate, -7))}>Previous</button>
+          <div className="date-title-block"><h2>{humanDate(selectedDate)}</h2></div>
           <div className="date-nav-actions">
             <button className="secondary-btn compact" onClick={() => setSelectedDate(dateKey())}>Today</button>
-            <button className="ghost-btn compact" onClick={() => setSelectedDate(shiftDate(selectedDate, 7))}>Week →</button>
+            <button className="ghost-btn compact week-nav-button" onClick={() => setSelectedDate(shiftDate(selectedDate, 7))}>Next</button>
           </div>
         </div>
-
         <div className="week-strip">
           {week.map((item) => (
             <button key={item.key} className={item.key === selectedDate ? "week-day active" : "week-day"} onClick={() => setSelectedDate(item.key)}>
-              <span>{item.day}</span>
-              <strong>{item.date}</strong>
-              {activities.some((x) => x.scheduledDate === item.key) && <i />}
+              <span>{item.day}</span><strong>{item.date}</strong>{activities.some((row) => row.scheduledDate === item.key) && <i />}
             </button>
           ))}
         </div>
       </section>
 
-      <section className="stats-grid four compact-stats">
-        <StatCard label="Activities" value={counts.total} helper="Selected day" />
-        <StatCard label="Completed" value={counts.completed} helper="Done" tone="success" />
-        <StatCard label="Pending" value={counts.pending} helper="Needs attention" tone="purple" />
-        <StatCard label="Not started" value={counts.notStarted} helper="Still to begin" tone={counts.notStarted ? "danger" : "success"} />
+      <section className="stats-grid four compact-stats timetable-stats">
+        <StatCard label="Activities" value={counts.total} />
+        <StatCard label="Completed" value={counts.completed} tone="success" />
+        <StatCard label="In progress" value={counts.inProgress} tone="blue" />
+        <StatCard label="Missed" value={counts.missed} tone={counts.missed ? "danger" : "success"} />
       </section>
 
-      <button className="primary-btn mobile-add" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close form" : "+ Add activity"}</button>
+      <button className="primary-btn mobile-add" onClick={() => setShowForm((value) => !value)}>{showForm ? "Close" : "Add activity"}</button>
 
       {showForm && (
         <section className="panel-card form-panel">
-          <div className="section-heading"><div><p className="eyebrow">New plan</p><h2>Add study activity</h2></div></div>
+          <div className="section-heading"><h2>Add study activity</h2></div>
           <form className="study-activity-form" onSubmit={addActivity}>
             <div className="form-grid two">
-              <label>Activity title<input name="title" placeholder="e.g. Revise quadratic equations" autoFocus /></label>
-              <label>Subject
-                <select name="subject" defaultValue="General">
-                  <option>General</option>
-                  {SUBJECT_ORDER.map((slug) => <option key={slug}>{SUBJECTS[slug].name}</option>)}
-                </select>
-              </label>
+              <label>Subject<select name="subjectSlug" value={activitySubjectSlug} onChange={(e) => changeActivitySubject(e.target.value)} required>{SUBJECT_ORDER.map((slug) => <option key={slug} value={slug}>{SUBJECTS[slug].name}</option>)}</select></label>
+              <label>Chapter<select name="chapterId" value={activityChapterId} onChange={(e) => setActivityChapterId(e.target.value)} required>{selectedActivityChapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select></label>
+            </div>
+            <div className="form-grid two">
+              <label>Activity title<input name="title" autoFocus /></label>
+              <label>Type<select name="activityType" defaultValue="Study">{ACTIVITY_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
             </div>
             <div className="form-grid four">
-              <label>Type<select name="activityType" defaultValue="Study">{ACTIVITY_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
               <label>Date<input name="scheduledDate" type="date" defaultValue={selectedDate} /></label>
               <label>Start time<input name="startTime" type="time" /></label>
               <label>End time<input name="endTime" type="time" /></label>
+              <label>Status<select name="status" defaultValue="NOT_STARTED"><option value="NOT_STARTED">Assigned</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETED">Completed</option><option value="MISSED">Missed</option></select></label>
             </div>
-            <div className="form-grid two">
-              <label>Status
-                <select name="status" defaultValue="NOT_STARTED">
-                  <option value="NOT_STARTED">Not started</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="COMPLETED">Completed</option>
-                </select>
-              </label>
-              <label>Notes<textarea name="notes" placeholder="What exactly should be completed?" /></label>
-            </div>
+            <label>Notes<textarea name="notes" /></label>
             {error && <div className="error-box">{error}</div>}
             <div className="form-actions-right"><button type="button" className="ghost-btn compact" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-btn compact" disabled={saving}>{saving ? "Saving…" : "Add activity"}</button></div>
           </form>
@@ -214,42 +212,34 @@ function TimetableContent() {
       )}
 
       <section className="panel-card">
-        <div className="section-heading"><div><p className="eyebrow">Daily plan</p><h2>{dayActivities.length ? `${dayActivities.length} activities` : "Nothing planned yet"}</h2></div></div>
+        <div className="section-heading"><h2>{dayActivities.length ? `${dayActivities.length} activities` : "Daily plan"}</h2></div>
         {dayActivities.length ? (
           <div className="activity-list">
             {dayActivities.map((activity) => {
-              const info = statusInfo(activity.status);
+              const label = taskStatusLabel(activity);
+              const tone = taskStatusTone(activity);
+              const chapterTitle = activity.chapterTitle || activity.linkedChapterTitle || "";
               return (
-                <article className={`activity-card status-${String(activity.status || "NOT_STARTED").toLowerCase()}`} key={activity.id}>
-                  <div className="activity-time">
-                    <strong>{activity.startTime || "Anytime"}</strong>
-                    <span>{activity.endTime ? `to ${activity.endTime}` : ""}</span>
-                  </div>
+                <article className={`activity-card status-${label.toLowerCase().replaceAll(" ", "-")}`} key={activity.id}>
+                  <div className="activity-time"><strong>{displayTime(activity)}</strong></div>
                   <div className="activity-main">
-                    <div className="activity-title-row"><strong>{activity.title}</strong><span className={`pill ${info.tone}`}>{info.label}</span></div>
-                    <small>
-                      {activity.subject || "General"} • {activity.activityType || "Study"}
-                      {activity.autoGenerated ? " • Auto from chapter plan" : ""}
-                    </small>
-                    {activity.notes && <p>{activity.notes}</p>}
-                    <div className="activity-status-actions">
-                      <button className={activity.status === "NOT_STARTED" ? "status-btn active" : "status-btn"} onClick={() => setStatus(activity, "NOT_STARTED")}>Not started</button>
-                      <button className={activity.status === "PENDING" ? "status-btn pending active" : "status-btn pending"} onClick={() => setStatus(activity, "PENDING")}>Pending</button>
-                      <button className={activity.status === "COMPLETED" ? "status-btn complete active" : "status-btn complete"} onClick={() => setStatus(activity, "COMPLETED")}>✓ Completed</button>
+                    <div className="activity-title-row"><strong>{activity.title}</strong><span className={`pill ${tone}`}>{label}</span></div>
+                    <small>{activity.subject || "General"}{chapterTitle ? ` • ${chapterTitle}` : ""}{` • ${activity.activityType || "Study"}`}</small>
+                    {activity.assignedByAdmin && <small>Assigned by {activity.assignedByName || "Admin"}{activity.priority ? ` • ${String(activity.priority).toLowerCase()} priority` : ""}</small>}
+                    {activity.notes && !String(activity.notes).startsWith("Automatically linked to") && <p>{activity.notes}</p>}
+                    <div className="activity-status-actions four-status-actions">
+                      <button className={label === "Assigned" ? "status-btn active" : "status-btn"} onClick={() => setStatus(activity, "NOT_STARTED")}>Assigned</button>
+                      <button className={label === "In progress" ? "status-btn progress active" : "status-btn progress"} onClick={() => setStatus(activity, "IN_PROGRESS")}>In progress</button>
+                      <button className={label === "Completed" ? "status-btn complete active" : "status-btn complete"} onClick={() => setStatus(activity, "COMPLETED")}>Completed</button>
+                      <button className={label === "Missed" ? "status-btn missed active" : "status-btn missed"} onClick={() => setStatus(activity, "MISSED")}>Missed</button>
                     </div>
                   </div>
-                  {activity.autoGenerated ? (
-                    <span className="activity-delete muted" title="Change or remove the planned date from the chapter card.">Linked</span>
-                  ) : (
-                    <button className="danger-text activity-delete" onClick={() => deleteStudyActivity(user.uid, activity.id)}>Delete</button>
-                  )}
+                  {!activity.autoGenerated && !activity.assignedByAdmin && <button className="danger-text activity-delete" onClick={() => deleteStudyActivity(user.uid, activity.id)}>Delete</button>}
                 </article>
               );
             })}
           </div>
-        ) : (
-          <div className="empty-state"><span>＋</span><strong>No activities on this day</strong><p>Add study, revision, homework, reading or test activities to build your timetable.</p></div>
-        )}
+        ) : <div className="empty-state compact-empty"><strong>No activities on this day</strong></div>}
       </section>
     </AppShell>
   );

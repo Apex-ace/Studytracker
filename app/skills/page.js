@@ -27,8 +27,8 @@ function SkillsContent() {
   const subjects = ["All", ...new Set(SKILLS.map((skill) => skill.subject))];
 
   return (
-    <AppShell title="Skill tracker" subtitle="Track subject competencies separately from chapter marks.">
-      <div className="filter-chips standalone">{subjects.map((item) => <button key={item} className={subject === item ? "filter-chip active" : "filter-chip"} onClick={() => setSubject(item)}>{item}</button>)}</div>
+    <AppShell title="Skill tracker">
+      <div className="filter-chips standalone horizontal-scroll-chips">{subjects.map((item) => <button key={item} className={subject === item ? "filter-chip active" : "filter-chip"} onClick={() => setSubject(item)}>{item}</button>)}</div>
       <div className="skill-grid">
         {rows.map((skill) => <SkillRow key={skill.id} uid={user.uid} skill={skill} saved={progress[skill.id]} settings={settings} />)}
       </div>
