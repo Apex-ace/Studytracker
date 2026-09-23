@@ -77,7 +77,7 @@ export function SubjectProgressGraphic({ rows = [], title = "Subject progress" }
       <div className="subject-visual-list">
         {rows.map((row) => (
           <div className="subject-visual-row" key={row.subject.slug}>
-            <div><span>{row.subject.name}</span><strong>{Math.round(row.avgLatest || 0)}%</strong></div>
+            <div><span>{row.subject.name}</span><strong>{row.scoredAreas ? `Latest test ${Math.round(row.avgLatest)}%` : "No test yet"}</strong></div>
             <div className="subject-visual-bar"><span style={{ width: `${Math.max(0, Math.min(100, row.avgLatest || 0))}%` }} /></div>
             <small>First {Math.round(row.firstCutPercent || 0)}% · Second {Math.round(row.secondCutPercent || 0)}% · Third {Math.round(row.thirdCutPercent || 0)}%</small>
           </div>

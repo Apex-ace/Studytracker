@@ -37,9 +37,13 @@ function chapterOptionsFor(subjectNames) {
     );
 }
 
-export default function MockTestForm({ uid, settings, onDone }) {
-  const [form, setForm] = useState(initial);
+export default function MockTestForm({ uid, settings, onDone, heading = "Add mock test", createdByAdmin = null }) {
+  const [form, setForm] = useState(() => ({
+    ...initial,
+    target: String(settings?.defaultTarget ?? initial.target),
+  }));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const metrics = useMemo(() => mockTestMetrics(form, settings), [form, settings]);
   const chapterOptions = useMemo(() => chapterOptionsFor(form.subjects), [form.subjects]);
 
@@ -75,6 +79,7 @@ export default function MockTestForm({ uid, settings, onDone }) {
   async function submit(event) {
     event.preventDefault();
     setSaving(true);
+    setError("");
     try {
       const numericKeys = ["marksObtained","totalMarks","target","timeTaken","unattemptedMarks","carelessLoss","conceptLoss","timeMgmtLoss","otherLoss"];
       const values = { ...form };
@@ -90,15 +95,23 @@ export default function MockTestForm({ uid, settings, onDone }) {
       values.chapter = values.chapters.length ? values.chapters.join(", ") : "Full syllabus";
       values.chapterIds = selectedChapters.map((item) => item.id);
 
+      if (createdByAdmin) {
+        values.createdByAdmin = true;
+        values.createdByUid = String(createdByAdmin.uid || "");
+        values.createdByName = String(createdByAdmin.name || "Admin");
+      }
+
       await addMockTest(uid, values);
       setForm({ ...initial, target: String(settings.defaultTarget) });
       onDone?.();
+    } catch (err) {
+      setError(err?.message || "Unable to save this mock test.");
     } finally { setSaving(false); }
   }
 
   return (
     <form className="mock-form" onSubmit={submit}>
-      <div className="section-heading"><h2>Add mock test</h2></div>
+      <div className="section-heading"><h2>{heading}</h2></div>
 
       <div className="form-grid three">
         <label>Date<input type="date" required value={form.date} onChange={(e) => set("date", e.target.value)} /></label>
@@ -165,6 +178,7 @@ export default function MockTestForm({ uid, settings, onDone }) {
         <div><span>Potential</span><strong>{metrics.executionPotential === null ? "—" : pct(metrics.executionPotential, 1)}</strong></div>
         <button className="primary-btn" disabled={saving}>{saving ? "Saving…" : "Save test"}</button>
       </div>
+      {error && <div className="error-box">{error}</div>}
     </form>
   );
 }

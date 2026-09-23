@@ -37,7 +37,7 @@ function DashboardContent() {
       <section className="hero-card dashboard-hero-clean">
         <div className="hero-copy">
           <p className="eyebrow">Overall preparation</p>
-          <h2>{dashboard.overallLatest ? `${Math.round(dashboard.overallLatest)}% latest average` : "Start your first chapter test"}</h2>
+          <h2>{dashboard.scoredAreas ? `Latest test ${Math.round(dashboard.overallLatest)}%` : "No test yet"}</h2>
           <div className="hero-actions">
             <Link href="/timetable" className="primary-btn compact">Open timetable</Link>
             <Link href="/subjects" className="secondary-btn compact">Subjects</Link>
@@ -75,7 +75,7 @@ function DashboardContent() {
                     <span>Third {Math.round(row.thirdCutPercent)}%</span>
                   </div>
                 </div>
-                <strong className="subject-score">{Math.round(row.avgLatest)}%</strong>
+                <strong className="subject-score">{row.scoredAreas ? `Latest test ${Math.round(row.avgLatest)}%` : "No test yet"}</strong>
               </Link>
             ))}
           </div>

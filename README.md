@@ -23,6 +23,7 @@ A mobile-first **Next.js + Firebase** study-performance tracker based on the sup
 - Realtime list of every registered student
 - Live Overall Latest %, Board Ready %, First Cut %, and Weak Areas
 - Per-student drilldown with subject health and weak/delayed chapter list
+- Admin mock-test entry for an individual student
 - Detailed all-chapter monitoring
 - Admin-editable performance thresholds matching the Excel Settings sheet
 
@@ -134,7 +135,7 @@ The chapter and skill catalog is bundled in `lib/catalog.js`, because it is curr
 
 The student app now also includes:
 
-- `/timetable` — daily/weekly study planning with Study, Revision, Homework, Test, Reading, Practice and Other activities. Each activity can be marked **Not started**, **Pending** or **Completed**.
+- `/timetable` — daily/weekly study planning with First/Second/Third Cut, Test 1/2/3, Study, Revision, Homework, Test, Reading, Practice and Other activities. Cut activities stay linked to the selected subject and chapter progress. Each activity can be marked **Assigned**, **In progress**, **Completed** or **Missed**.
 - `/words` — a personal Words & Meanings notebook with subject, learned date, example sentence and notes.
 
 The per-student admin detail page also shows today's timetable activity and the student's recently learned words.

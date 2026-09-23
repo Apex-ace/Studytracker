@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import AppShell from "@/components/AppShell";
 import StatCard from "@/components/StatCard";
+import MockTestForm from "@/components/MockTestForm";
+import { useAuth } from "@/components/AuthProvider";
 import {
   ConsistencyGraphic,
   StageProgressGraphic,
@@ -38,11 +40,13 @@ function displayTime(activity) {
 function UserProgressContent() {
   const params = useParams();
   const uid = params.uid;
+  const { user, profile } = useAuth();
   const [student, setStudent] = useState(null);
   const [progress, setProgress] = useState({});
   const [settingsRemote, setSettingsRemote] = useState(null);
   const [activities, setActivities] = useState([]);
   const [tests, setTests] = useState([]);
+  const [showMockTestForm, setShowMockTestForm] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -71,7 +75,7 @@ function UserProgressContent() {
       admin
       title={student?.name || "Student progress"}
       subtitle={student?.email || ""}
-      actions={<div className="live-actions"><Link href={`/admin/planner?student=${uid}`} className="primary-btn compact">Assign work</Link><Link href="/admin" className="secondary-btn compact">All students</Link></div>}
+      actions={<div className="live-actions"><Link href={`/admin/planner?student=${uid}`} className="primary-btn compact">Assign work</Link><button className="secondary-btn compact desktop-action" onClick={() => setShowMockTestForm((value) => !value)}>{showMockTestForm ? "Close test form" : "Add mock test"}</button><Link href="/admin" className="secondary-btn compact">All students</Link></div>}
     >
       <section className="stats-grid four compact-stats">
         <StatCard label="Today completed" value={`${todayCounts.completed}/${todayCounts.total}`} tone="success" />
@@ -79,6 +83,23 @@ function UserProgressContent() {
         <StatCard label="Second Cut" value={pct(metrics.secondCutPercent)} tone="purple" />
         <StatCard label="Third Cut" value={pct(metrics.thirdCutPercent)} />
       </section>
+
+      <button className="secondary-btn mobile-add" onClick={() => setShowMockTestForm((value) => !value)}>{showMockTestForm ? "Close test form" : "Add mock test"}</button>
+
+      {showMockTestForm && (
+        <section className="panel-card form-panel">
+          <MockTestForm
+            uid={uid}
+            settings={settings}
+            heading={`Add mock test for ${student?.name || "student"}`}
+            createdByAdmin={{
+              uid: user?.uid,
+              name: profile?.name || profile?.email || "Admin",
+            }}
+            onDone={() => setShowMockTestForm(false)}
+          />
+        </section>
+      )}
 
       <div className="admin-visual-grid">
         <section className="panel-card"><TaskStatusGraphic activities={todayActivities} title="Today" /></section>

@@ -6,16 +6,38 @@ import AppShell from "@/components/AppShell";
 import StatCard from "@/components/StatCard";
 import { useAuth } from "@/components/AuthProvider";
 import { SUBJECT_ORDER, SUBJECTS } from "@/lib/catalog";
+import { useTracker } from "@/lib/useTracker";
 import { taskStatusLabel, taskStatusTone } from "@/lib/adminAnalytics";
 import {
   addStudyActivity,
+  addChapterStageActivity,
   deleteStudyActivity,
   updateStudyActivityStatus,
   watchStudyActivities,
   syncExistingChapterPlansToTimetable,
 } from "@/lib/firestore";
 
-const ACTIVITY_TYPES = ["Study", "Revision", "Homework", "Test", "Reading", "Practice", "Other"];
+const ACTIVITY_TYPES = [
+  "First Cut",
+  "Second Cut",
+  "Third Cut",
+  "Test 1",
+  "Test 2",
+  "Test 3",
+  "Study",
+  "Revision",
+  "Homework",
+  "Test",
+  "Reading",
+  "Practice",
+  "Other",
+];
+
+const CUT_STAGES = {
+  "First Cut": { stageKey: "first-cut", actualField: "firstCutActual" },
+  "Second Cut": { stageKey: "revision-2", actualField: "rev2Actual" },
+  "Third Cut": { stageKey: "revision-3", actualField: "rev3Actual" },
+};
 
 function dateKey(date = new Date()) {
   const y = date.getFullYear();
@@ -69,6 +91,7 @@ function displayTime(activity) {
 
 function TimetableContent() {
   const { user } = useAuth();
+  const { progress } = useTracker();
   const [activities, setActivities] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => dateKey());
   const [showForm, setShowForm] = useState(false);
@@ -130,19 +153,30 @@ function TimetableContent() {
     }
 
     try {
-      await addStudyActivity(user.uid, {
+      const activityType = String(form.get("activityType") || "Study");
+      const values = {
         title,
         subject: subject.name,
         subjectSlug,
         chapterId,
         chapterTitle: chapter.title,
-        activityType: String(form.get("activityType") || "Study"),
+        activityType,
         scheduledDate: String(form.get("scheduledDate") || selectedDate),
         startTime: String(form.get("startTime") || ""),
         endTime: String(form.get("endTime") || ""),
         status: String(form.get("status") || "NOT_STARTED"),
         notes: String(form.get("notes") || "").trim(),
-      });
+      };
+
+      const cutStage = CUT_STAGES[activityType];
+      if (cutStage) {
+        await addChapterStageActivity(user.uid, chapter, subjectSlug, cutStage.stageKey, {
+          ...values,
+          existingActualDate: progress[chapter.id]?.[cutStage.actualField] || "",
+        });
+      } else {
+        await addStudyActivity(user.uid, values);
+      }
       formElement.reset();
       changeActivitySubject(initialSubjectSlug);
       setShowForm(false);

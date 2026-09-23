@@ -71,8 +71,13 @@ function AdminContent() {
   }, [rows]);
 
   const averageLatest = useMemo(() => {
-    const scored = rows.filter((row) => row.metrics.overallLatest > 0);
-    return scored.length ? scored.reduce((sum, row) => sum + row.metrics.overallLatest, 0) / scored.length : 0;
+    const scored = rows.filter((row) => row.metrics.scoredAreas > 0);
+    return {
+      hasTests: scored.length > 0,
+      value: scored.length
+        ? scored.reduce((sum, row) => sum + row.metrics.overallLatest, 0) / scored.length
+        : 0,
+    };
   }, [rows]);
 
   const filtered = rows.filter(({ student }) => {
@@ -109,7 +114,7 @@ function AdminContent() {
         <StatCard label="Students" value={students.length} />
         <StatCard label="Today planned" value={todayCounts.total} tone="blue" />
         <StatCard label="Today completed" value={todayCounts.completed} tone="success" />
-        <StatCard label="Average test score" value={pct(averageLatest)} tone="purple" />
+        <StatCard label="Average test score" value={averageLatest.hasTests ? `Latest test ${Math.round(averageLatest.value)}%` : "No test yet"} tone="purple" />
       </section>
 
       {showSettings && (
